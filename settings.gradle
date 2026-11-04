@@ -1,0 +1,7 @@
+plugins {
+    // Download a JDK toolchain when the machine does not already have Java 21.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'rail-network-sim'
+include('app')
