@@ -1,0 +1,129 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'checkstyle'
+    id 'jacoco'
+    id 'org.barfuin.gradle.jacocolog' version '3.1.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.sparkjava:spark-core:2.9.4'
+    implementation 'com.google.code.gson:gson:2.13.2'
+    implementation 'org.json:json:20231013'
+    implementation 'org.reflections:reflections:0.10.2'
+    implementation 'org.slf4j:slf4j-simple:2.0.17'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+        }
+        resources {
+           srcDir 'src/main/resources'
+        }
+    }
+   test {
+        java {
+           srcDir 'src/test'
+        }
+    }
+}
+
+processResources {
+    duplicatesStrategy = 'INCLUDE'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+checkstyle {
+    configFile = file("${project.rootDir}/config/checkstyle.xml")
+    toolVersion = '12.1.2'
+}
+
+task lint {
+    description("Lints the entire codebase, runs both checkstyleMain and checkstyleTest")
+    group("verification")
+    dependsOn('checkstyleMain', 'checkstyleTest')
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        csv.required = false
+    }
+
+    afterEvaluate {
+        classDirectories.from = files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/App**',
+                'scintilla/**'
+            ])
+        })
+    }
+
+    dependsOn test
+}
+
+jacocoTestCoverageVerification {
+    // violationRules {
+    //     rule {
+    //         limit {
+    //             counter = "BRANCH"
+    //             minimum = 0.80
+    //         }
+    //     }
+    // }
+
+    afterEvaluate {
+        classDirectories.from = files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/App**',
+                'scintilla/**'
+            ])
+        })
+    }
+
+    dependsOn jacocoTestReport
+}
+
+task coverage {
+    description("Generate coverage report and check if above threshold if it exists")
+    group("verification")
+    dependsOn('jacocoTestCoverageVerification')
+}
+
+task compile {
+    description("Checks if main code can compile with test code")
+    group = 'verification'
+    dependsOn 'testClasses'
+}
+
+jacocoLogTestCoverage {
+    logAlways = true
+    counters {
+        showClassCoverage = false
+        showMethodCoverage = false
+        showInstructionCoverage = false
+        showComplexityCoverage = false
+    }
+}
+
+application {
+    mainClass = 'railnet.App'
+}
